@@ -1,4 +1,5 @@
 from flask import Flask, jsonify, make_response, request, abort
+from gevent.pywsgi import WSGIServer
 from dbaccess import (startup_db, register_user, verify_password,
                       load_all_usernames, contains_username, load_messages, save_message)
 from jwtverify import create_token, verify_token_and_extract_username
@@ -106,4 +107,4 @@ def frontend():
 
 if __name__ == '__main__':
     startup_db()
-    app.run()
+    WSGIServer(('', 5000), app).serve_forever()
