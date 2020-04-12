@@ -1,4 +1,4 @@
-body, input, button, label, textarea {
+body, input, button, label, select, option, textarea {
   font-family: Verdana;
   font-size: 12px;
 }
@@ -30,4 +30,8 @@ ul {
 
 button {
   margin-top: 2px;
+}
+
+testarea {
+  width: 100px;
 }

@@ -4,12 +4,10 @@ from passlib.hash import pbkdf2_sha256
 DB_CONNECTION = connect(user='postgres', password='password',
                         host='localhost' , port='5432', database='postgres')
 
-
-def startup(drop_on_startup=True):
+def startup_db(drop_on_startup=True):
     if drop_on_startup:
         drop_tables()
     create_tables_if_necessary()
-
 
 def create_tables_if_necessary():
     cursor = DB_CONNECTION.cursor()
@@ -24,7 +22,6 @@ def create_tables_if_necessary():
     
     cursor.close()
 
-
 def drop_tables():
     cursor = DB_CONNECTION.cursor()
     
@@ -36,7 +33,6 @@ def drop_tables():
     
     cursor.close()
     
-
 def register_user(username, password):
     password_hash = pbkdf2_sha256.hash(password)
     cursor = DB_CONNECTION.cursor()
@@ -47,7 +43,6 @@ def register_user(username, password):
     success = cursor.rowcount > 0  # successful if user didn't previously exist
     cursor.close()
     return success
-
 
 def verify_password(username, password):
     cursor = DB_CONNECTION.cursor()
@@ -63,7 +58,23 @@ def verify_password(username, password):
     cursor.close()
     return success
 
+def load_all_usernames():
+    cursor = DB_CONNECTION.cursor()
+    cursor.execute('SELECT username FROM users GROUP BY username ORDER BY username')
+    DB_CONNECTION.commit()
+    
+    usernames = [row[0] for row in cursor.fetchall()]
+    cursor.close()
+    return usernames
 
+def contains_username(username):
+    cursor = DB_CONNECTION.cursor()
+    cursor.execute('SELECT * FROM users where username = %s', (username,))
+    DB_CONNECTION.commit()
+    
+    row = cursor.fetchone()
+    return row is not None
+    
 def load_messages(username):
     cursor = DB_CONNECTION.cursor()
     cursor.execute('SELECT message FROM messages WHERE username = %s ORDER BY id', (username,))
@@ -74,12 +85,8 @@ def load_messages(username):
     cursor.close()
     return messages
 
-
 def save_message(username, message):
     cursor = DB_CONNECTION.cursor()
     cursor.execute('INSERT INTO messages(username, message) VALUES (%s, %s)', (username, message))
     DB_CONNECTION.commit()
     cursor.close()
-
-
-startup()

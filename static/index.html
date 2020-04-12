@@ -31,13 +31,19 @@
     </div>
     <div id="contents">
       <div>
-        <h1>Existing notes</h1>
-        <ul id="notes">
+        <label>Showing posts by</label>
+        <select id="targetUsername" onchange="changeTargetUser()"></select>
+        <button onclick="refresh()">Refresh</button>
+      </div>
+      <div>
+        <ul id="posts">
         </ul>
-        <h1>Create new note</h1>
-        <textarea id="newNote" type="text"></textarea>
+      </div>
+      <div id="newPostDiv">
+        <p>New post</p>
+        <textarea id="newPost" type="text"></textarea>
         <br>
-        <button onclick="addNewNote()">Submit</button>
+        <button onclick="addNewPost()">Submit</button>
       </div>
     </div>
     <script src="static/script.js"></script>
