@@ -78,20 +78,22 @@ async function renderTargetUserSelector(accessorUsername, initialTargetUser) {
     document.getElementById("targetUsername").appendChild(ownOption);
     
     const ownUsername = getUsernameAndToken().username;
-    let initialTargetIndex = 0;
+    let targetIndex = 0;
+    let indexInSelectMenu = 1;  // for-loop skips "You" which is in position 0
       
-    for (let i = 0; i < usernames.length; i++) {
-      if (usernames[i] != ownUsername) {
+    for (let indexInResults = 0; indexInResults < usernames.length; indexInResults++) {
+      if (usernames[indexInResults] != ownUsername) {
         const foreignOption = document.createElement("option");
-        foreignOption.innerText = usernames[i];  // innerText protects against XSS
+        foreignOption.innerText = usernames[indexInResults];  // innerText protects against XSS
         document.getElementById("targetUsername").appendChild(foreignOption);
-        if (initialTargetUser == usernames[i]) {
-          initialTargetIndex = i;
+        if (initialTargetUser == usernames[indexInResults]) {
+          targetIndex = indexInSelectMenu;
         }
+        indexInSelectMenu++;
       }
     }
     
-    document.getElementById("targetUsername").selectedIndex = initialTargetIndex;
+    document.getElementById("targetUsername").selectedIndex = targetIndex;
   }
 }
 
