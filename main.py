@@ -69,7 +69,6 @@ def write_message(target_username):
 @app.route('/users', methods=['OPTIONS'])
 @app.route('/messages/<string:target_username>', methods=['OPTIONS'])
 def options(*args):
-    print('In here')
     response = make_response('', 200)
     return response
 

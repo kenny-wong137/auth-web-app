@@ -38,20 +38,20 @@ const baseUrl = "http://localhost:5000/";
 
 function getTargetUsername() {
   const selectedIndex = document.getElementById("targetUsername").selectedIndex;
-  let targetUsername = document.getElementById("targetUsername").options[selectedIndex].text;
-  if (targetUsername == "You") {
-    targetUsername = getUsernameAndToken().username;
+  if (selectedIndex == -1) {
+    return null;
   }
-  return targetUsername;
+  return document.getElementById("targetUsername").options[selectedIndex].value;
 }
 
-async function renderTargetUserSelector(accessorUsername, initialTargetUser) {
-  if (!userIsStillLoggedIn(accessorUsername)) {
+async function renderTargetUserSelector() {  
+  const storedData = getUsernameAndToken();  
+  if (storedData == null) { // in case user has logged out
     return;
   }
   
   const url = baseUrl + "users";
-  const storedData = getUsernameAndToken();  
+
   const requestJson = {
     method: "Get",
     headers: {
@@ -66,27 +66,29 @@ async function renderTargetUserSelector(accessorUsername, initialTargetUser) {
   if (response.status == 200) {
     const responseJson = await response.json();
 
-    if (!userIsStillLoggedIn(accessorUsername)) {
+    if (!userIsStillLoggedIn(storedData.username)) {
       return;
     }
     
     const usernames = responseJson.usernames;
+    const targetUsername = getTargetUsername();
     
     document.getElementById("targetUsername").innerHTML = "";
     const ownOption = document.createElement("option");
+    ownOption.value = storedData.username;
     ownOption.innerText = "You";
     document.getElementById("targetUsername").appendChild(ownOption);
-    
-    const ownUsername = getUsernameAndToken().username;
+
     let targetIndex = 0;
     let indexInSelectMenu = 1;  // for-loop skips "You" which is in position 0
       
     for (let indexInResults = 0; indexInResults < usernames.length; indexInResults++) {
-      if (usernames[indexInResults] != ownUsername) {
+      if (usernames[indexInResults] != ownOption.value) {
         const foreignOption = document.createElement("option");
         foreignOption.innerText = usernames[indexInResults];  // innerText protects against XSS
+        foreignOption.value = foreignOption.innerText;
         document.getElementById("targetUsername").appendChild(foreignOption);
-        if (initialTargetUser == usernames[indexInResults]) {
+        if (targetUsername == usernames[indexInResults]) {
           targetIndex = indexInSelectMenu;
         }
         indexInSelectMenu++;
@@ -97,14 +99,15 @@ async function renderTargetUserSelector(accessorUsername, initialTargetUser) {
   }
 }
 
-async function displayPosts(accessorUsername) {  
-  if (!userIsStillLoggedIn(accessorUsername)) {
+async function displayPosts() {  
+  const storedData = getUsernameAndToken();
+  if (storedData == null) { // in case logged out
     return;
   }
-
+  
   const targetUsername = getTargetUsername();
   const url = baseUrl + "messages/" + targetUsername;
-  const storedData = getUsernameAndToken();
+  
   const requestJson = {
     method: "Get",
     headers: {
@@ -119,7 +122,8 @@ async function displayPosts(accessorUsername) {
   if (response.status == 200) {
     const responseJson = await response.json();
     
-    if (!userIsStillLoggedIn(storedData.username)) {
+    // user could have logged out or changed selection item during the await
+    if (!userIsStillLoggedIn(storedData.username) || targetUsername != getTargetUsername()) {
       return;
     }
     
@@ -140,10 +144,17 @@ async function displayPosts(accessorUsername) {
     }
     
     document.getElementById("contents").style.display = "block";
+    
+    pendingRefreshJob = setTimeout(() => refresh(storedData.username), 5000);
   }
 }
 
 async function addNewPost() {
+  if (pendingRefreshJob != null) {
+    clearTimeout(pendingRefreshJob);
+    pendingRefreshJob = null;
+  }
+  
   const storedData = getUsernameAndToken();
   const url = baseUrl + "messages/" + getTargetUsername();
   const message = document.getElementById("newPost").value;
@@ -159,29 +170,29 @@ async function addNewPost() {
     mode: "cors",
     cache: "no-cache"
   };
+  
   document.getElementById("newPost").value = "";
   
   const response = await fetch(url, requestJson);
   
   if (response.status == 200) {
     document.getElementById("newPost").value = "";
-    displayPosts(storedData.username);
+    if (userIsStillLoggedIn(storedData.username)) {
+      displayPosts();
+    }
   }
 }
 
-function changeTargetUser() {
+function changeTargetUsername() {
+  if (pendingRefreshJob != null) {
+    clearTimeout(pendingRefreshJob);
+    pendingRefreshJob = null;
+  }
+  
   const storedData = getUsernameAndToken();
   document.getElementById("posts").style.display = "none";
   document.getElementById("newPostDiv").style.display = "none";
-  displayPosts(storedData.username);
-}
-
-async function refresh() {
-  document.getElementById("contents").style.display = "none";
-  const accessorUsername = getUsernameAndToken().username;
-  const targetUsername = getTargetUsername();
-  await renderTargetUserSelector(accessorUsername, targetUsername);
-  await displayPosts(accessorUsername);
+  displayPosts();
 }
 
 async function renderWhenLoggedIn() {
@@ -190,8 +201,8 @@ async function renderWhenLoggedIn() {
   document.getElementById("login").style.display = "none";
   document.getElementById("contents").style.display = "none";
   const username = getUsernameAndToken().username;
-  await renderTargetUserSelector(username, null);
-  await displayPosts(username);
+  await renderTargetUserSelector();
+  await displayPosts();
   document.getElementById("status").innerText = "Logged in as " + username + ".";
   document.getElementById("status").style.display = "inline";
   document.getElementById("logout").style.display = "inline";
@@ -267,9 +278,25 @@ function renderWhenLoggedOut() {
 }
 
 function logout() {
+  if (pendingRefreshJob != null) {
+    clearTimeout(pendingRefreshJob);
+    pendingRefreshJob = null;
+  }
+  
   removeUsernameAndToken();
   renderWhenLoggedOut();
 }
+
+async function refresh(expectedLoggedInUser) {
+  if (userIsStillLoggedIn(expectedLoggedInUser)) {
+    await renderTargetUserSelector();
+  }
+  if (userIsStillLoggedIn(expectedLoggedInUser)) {
+    await displayPosts();
+  }
+}
+
+let pendingRefreshJob = null;
 
 if (isLoggedIn()) {
   renderWhenLoggedIn();
