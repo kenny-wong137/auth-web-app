@@ -1,25 +1,30 @@
-function getUsernameAndToken() {
+function getStoredCredentials() {
   const loggedIn = window.sessionStorage.getItem("loggedIn");
   if (loggedIn == "true") {
     return {
       username: window.sessionStorage.getItem("username"),
-      token: window.sessionStorage.getItem("token")
+      token: window.sessionStorage.getItem("token"),
+      refreshToken: window.sessionStorage.getItem("refreshToken")
     }
   } else {
     return null;
   }
 }
 
-function setUsernameAndToken(username, token) {
+function setStoredCredentials(username, token, refreshToken) {
   window.sessionStorage.setItem("loggedIn", "true");
   window.sessionStorage.setItem("username", username);
   window.sessionStorage.setItem("token", token);
+  if (refreshToken != null) {
+    window.sessionStorage.setItem("refreshToken", refreshToken);
+  }
 }
 
-function removeUsernameAndToken() {
+function removeStoredCredentials() {
   window.sessionStorage.setItem("loggedIn", false);
   window.sessionStorage.removeItem("username");
   window.sessionStorage.removeItem("token");
+  window.sessionStorage.removeItem("refreshToken");
 }
 
 function isLoggedIn() {
@@ -45,8 +50,8 @@ function getTargetUsername() {
 }
 
 async function renderTargetUserSelector() {  
-  const storedData = getUsernameAndToken();  
-  if (storedData == null) { // in case user has logged out
+  const storedCredentials = getStoredCredentials();  
+  if (storedCredentials == null) { // in case user has logged out
     return;
   }
   
@@ -55,7 +60,7 @@ async function renderTargetUserSelector() {
   const requestJson = {
     method: "Get",
     headers: {
-      "Authorization": "Bearer " + storedData.token
+      "Authorization": "Bearer " + storedCredentials.token + " " + storedCredentials.refreshToken
     },
     mode: "cors",
     cache: "no-cache"
@@ -66,8 +71,12 @@ async function renderTargetUserSelector() {
   if (response.status == 200) {
     const responseJson = await response.json();
 
-    if (!userIsStillLoggedIn(storedData.username)) {
+    if (!userIsStillLoggedIn(storedCredentials.username)) {
       return;
+    }
+    
+    if ("token" in responseJson) {
+      setStoredCredentials(storedCredentials.username, responseJson.token, null);
     }
     
     const usernames = responseJson.usernames;
@@ -75,7 +84,7 @@ async function renderTargetUserSelector() {
     
     document.getElementById("targetUsername").innerHTML = "";
     const ownOption = document.createElement("option");
-    ownOption.value = storedData.username;
+    ownOption.value = storedCredentials.username;
     ownOption.innerText = "You";
     document.getElementById("targetUsername").appendChild(ownOption);
 
@@ -97,11 +106,16 @@ async function renderTargetUserSelector() {
     
     document.getElementById("targetUsername").selectedIndex = targetIndex;
   }
+  else if (response.status == 401) {
+    if (userIsStillLoggedIn(storedCredentials.username)) {
+      logout();
+    }
+  }
 }
 
 async function displayPosts() {  
-  const storedData = getUsernameAndToken();
-  if (storedData == null) { // in case logged out
+  const storedCredentials = getStoredCredentials();
+  if (storedCredentials == null) { // in case logged out
     return;
   }
   
@@ -111,7 +125,7 @@ async function displayPosts() {
   const requestJson = {
     method: "Get",
     headers: {
-      "Authorization": "Bearer " + storedData.token
+      "Authorization": "Bearer " + storedCredentials.token + " " + storedCredentials.refreshToken
     },
     mode: "cors",
     cache: "no-cache"
@@ -123,8 +137,12 @@ async function displayPosts() {
     const responseJson = await response.json();
     
     // user could have logged out or changed selection item during the await
-    if (!userIsStillLoggedIn(storedData.username) || targetUsername != getTargetUsername()) {
+    if (!userIsStillLoggedIn(storedCredentials.username) || targetUsername != getTargetUsername()) {
       return;
+    }
+    
+    if ("token" in responseJson) {
+      setStoredCredentials(storedCredentials.username, responseJson.token, null);
     }
     
     const messages = responseJson.messages;
@@ -137,7 +155,7 @@ async function displayPosts() {
     }
     document.getElementById("posts").style.display = "block";
     
-    if (targetUsername == storedData.username) {
+    if (targetUsername == storedCredentials.username) {
       document.getElementById("newPostDiv").style.display = "block";
     } else {
       document.getElementById("newPostDiv").style.display = "none";
@@ -145,7 +163,12 @@ async function displayPosts() {
     
     document.getElementById("contents").style.display = "block";
     
-    pendingRefreshJob = setTimeout(() => refresh(storedData.username), 5000);
+    pendingRefreshJob = setTimeout(() => refresh(storedCredentials.username), 5000);
+  }
+  else if (response.status == 401) {
+    if (userIsStillLoggedIn(storedCredentials.username)) {
+      logout();
+    }
   }
 }
 
@@ -155,13 +178,13 @@ async function addNewPost() {
     pendingRefreshJob = null;
   }
   
-  const storedData = getUsernameAndToken();
+  const storedCredentials = getStoredCredentials();
   const url = baseUrl + "messages/" + getTargetUsername();
   const message = document.getElementById("newPost").value;
   const requestJson = {
     method: "Post",
     headers: {
-      "Authorization": "Bearer " + storedData.token,
+      "Authorization": "Bearer " + storedCredentials.token + " " + storedCredentials.refreshToken,
       "Content-Type": "application/json"
     },
     body: JSON.stringify({
@@ -176,9 +199,23 @@ async function addNewPost() {
   const response = await fetch(url, requestJson);
   
   if (response.status == 200) {
+    const responseJson = await response.json();
+    
+    if (!userIsStillLoggedIn(storedCredentials.username)) {
+      return;
+    }
+    
+    if ("token" in responseJson) {
+      setStoredCredentials(storedCredentials.username, responseJson.token, null);
+    }
+    
     document.getElementById("newPost").value = "";
-    if (userIsStillLoggedIn(storedData.username)) {
-      displayPosts();
+
+    displayPosts();
+  }
+  else if (response.status == 401) {
+    if (userIsStillLoggedIn(storedCredentials.username)) {
+      logout();
     }
   }
 }
@@ -189,7 +226,7 @@ function changeTargetUsername() {
     pendingRefreshJob = null;
   }
   
-  const storedData = getUsernameAndToken();
+  const storedCredentials = getStoredCredentials();
   document.getElementById("posts").style.display = "none";
   document.getElementById("newPostDiv").style.display = "none";
   displayPosts();
@@ -200,7 +237,7 @@ async function renderWhenLoggedIn() {
   document.getElementById("logout").style.display = "none";
   document.getElementById("login").style.display = "none";
   document.getElementById("contents").style.display = "none";
-  const username = getUsernameAndToken().username;
+  const username = getStoredCredentials().username;
   await renderTargetUserSelector();
   await displayPosts();
   document.getElementById("status").innerText = "Logged in as " + username + ".";
@@ -241,7 +278,8 @@ async function authenticate(endpoint) {
   if (response.status == 200) {
     const responseJson = await response.json();
     const token = responseJson.token;
-    setUsernameAndToken(username, token);
+    const refreshToken = responseJson.refresh_token;  // python code uses underscores
+    setStoredCredentials(username, token, refreshToken);
     renderWhenLoggedIn();
   }
   else if (response.status == 401) {
@@ -283,7 +321,7 @@ function logout() {
     pendingRefreshJob = null;
   }
   
-  removeUsernameAndToken();
+  removeStoredCredentials();
   renderWhenLoggedOut();
 }
 
