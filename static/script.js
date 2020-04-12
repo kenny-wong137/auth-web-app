@@ -39,8 +39,6 @@ function userIsStillLoggedIn(expectedUsername) {
   }
 }
 
-const baseUrl = "http://localhost:5000/";
-
 function getTargetUsername() {
   const selectedIndex = document.getElementById("targetUsername").selectedIndex;
   if (selectedIndex == -1) {
@@ -55,7 +53,7 @@ async function renderTargetUserSelector() {
     return;
   }
   
-  const url = baseUrl + "users";
+  const url = "users";
 
   const requestJson = {
     method: "Get",
@@ -120,7 +118,7 @@ async function displayPosts() {
   }
   
   const targetUsername = getTargetUsername();
-  const url = baseUrl + "messages/" + targetUsername;
+  const url = "messages/" + targetUsername;
   
   const requestJson = {
     method: "Get",
@@ -179,7 +177,7 @@ async function addNewPost() {
   }
   
   const storedCredentials = getStoredCredentials();
-  const url = baseUrl + "messages/" + getTargetUsername();
+  const url = "messages/" + getTargetUsername();
   const message = document.getElementById("newPost").value;
   const requestJson = {
     method: "Post",
@@ -246,8 +244,7 @@ async function renderWhenLoggedIn() {
   document.getElementById("contents").style.display = "block";
 }
 
-async function authenticate(endpoint) {
-  const url = baseUrl + endpoint;
+async function authenticate(url) {
   const username = document.getElementById("username").value;
   const password = document.getElementById("password").value;
   if (username.match(/^[0-9a-zA-Z]+$/) == null || password.match(/^[0-9a-zA-Z]+$/) == null) {
@@ -283,10 +280,10 @@ async function authenticate(endpoint) {
     renderWhenLoggedIn();
   }
   else if (response.status == 401) {
-    if (endpoint == "login") {
+    if (url == "login") {
       document.getElementById("status").innerText = "Invalid credentials";
     }
-    else if (endpoint == "register") {
+    else if (url == "register") {
       document.getElementById("status").innerText = "Account already exists with this username.";
     }
     document.getElementById("status").style.display = "inline";
