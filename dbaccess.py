@@ -1,7 +1,6 @@
 from psycopg2 import connect
 from passlib.hash import pbkdf2_sha256
 from jwt import encode, decode, ExpiredSignatureError
-from uuid import uuid4
 import datetime
 
 DB_CONNECTION = connect(user='postgres', password='password',
@@ -76,6 +75,15 @@ def verify_password(username, password):
     return success
 
 
+def change_password(username, new_password):
+    password_hash = pbkdf2_sha256.hash(new_password)
+    cursor = DB_CONNECTION.cursor()
+    cursor.execute('UPDATE users SET password_hash = %s WHERE username = %s',
+                   (password_hash, username))
+    DB_CONNECTION.commit()
+    cursor.close()
+
+
 def load_all_usernames():
     cursor = DB_CONNECTION.cursor()
     cursor.execute('SELECT username FROM users GROUP BY username ORDER BY username')
@@ -113,24 +121,30 @@ def save_message(username, message):
     cursor.close()
 
 
-def create_token(username, require_refresh):
+def create_token(username):
     payload = {'username' : username,
                'exp': datetime.datetime.utcnow() + datetime.timedelta(seconds=60)}
     token = encode(payload, SECRET, algorithm='HS256').decode('utf-8')
-    
-    if require_refresh:
-        refresh_payload = {'username' : username, 'extra' : str(uuid4())}
-        refresh_token = encode(refresh_payload, SECRET, algorithm='HS256').decode('utf-8')
-            # not strictly necessary to use jwt library; could simply use uuid
+    return token
 
-        cursor = DB_CONNECTION.cursor()
-        cursor.execute('INSERT INTO refresh VALUES (%s, %s) ON CONFLICT DO NOTHING',
-                       (refresh_token, username))
-        DB_CONNECTION.commit()
-        cursor.close()   
-        return {'token' : token, 'refresh_token' : refresh_token}
-    else:
-        return {'token' : token}
+
+def create_refresh_token(username, password, old_password=None):
+    refresh_payload = {'username' : username, 'password' : password}
+    refresh_token = encode(refresh_payload, SECRET, algorithm='HS256').decode('utf-8')
+
+    cursor = DB_CONNECTION.cursor()
+    cursor.execute('INSERT INTO refresh VALUES (%s, %s) ' +
+                   'ON CONFLICT (refresh_token) DO UPDATE SET username = EXCLUDED.username',
+                   (refresh_token, username))
+    
+    if old_password is not None:
+        old_refresh_payload = {'username' : username, 'password' : old_password}
+        old_refresh_token = encode(old_refresh_payload, SECRET, algorithm='HS256').decode('utf-8')
+        cursor.execute('DELETE FROM refresh WHERE refresh_token = %s', (old_refresh_token,))
+        print('row count: {}'.format(cursor.rowcount))
+    DB_CONNECTION.commit()
+    
+    return refresh_token
         
     
 def verify_token_and_extract_username_and_new_token(request_header):
@@ -153,7 +167,7 @@ def verify_token_and_extract_username_and_new_token(request_header):
         DB_CONNECTION.commit()
         row = cursor.fetchone()
         
-        if row is None:   # possible for admin to have manually removed refresh token from db
+        if row is None:   # refresh tokens removed upon change of password
             return None
         
         username_in_db = row[0]
@@ -161,7 +175,7 @@ def verify_token_and_extract_username_and_new_token(request_header):
         if username_in_db != refresh_payload['username']:  # this check isn't strictly necessary
             return None
         
-        new_token = create_token(username_in_db, require_refresh=False)['token']
+        new_token = create_token(username_in_db)
         cursor.close()
         return {'username' : username_in_db, 'token' : new_token}
     except:  # token signature invalid

@@ -9,6 +9,27 @@
     <div>
       <p id="status"></p>
       <button id="logout" onclick="logout()">Log out</button>
+      <div id="showChangePasswordDiv">
+        <button id="showChangePassword" onclick="showChangePassword()">Change password</button>
+      </div id="showChangePasswordDiv">
+      <div id="passwordChange">
+        <table>
+          <tr>
+            <td>Old password:</td>
+            <td>
+              <input id="oldPassword" class="auth" type="password">
+            </td>
+          </tr>
+          <tr>
+            <td>New password:</td>
+            <td>
+              <input id="newPassword" class="auth" type="password">
+            </td>
+          </tr>
+        </table>
+        <button onclick="changePassword()" style="margin-top: 4px;">Submit</button>
+        <p id="passwordMessage"></p>
+      </div>
     </div>
     <div id="login">
       <h1>Log in</h1>
@@ -30,6 +51,7 @@
       <button onclick="register()">Sign up</button>  
     </div>
     <div id="contents">
+      <br>
       <div>
         <label>Showing posts by</label>
         <select id="targetUsername" onchange="changeTargetUsername()"></select>

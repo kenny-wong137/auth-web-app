@@ -1,8 +1,9 @@
 from flask import Flask, jsonify, make_response, request, abort
 from gevent.pywsgi import WSGIServer
-from dbaccess import (startup_db, register_user, verify_password,
+from dbaccess import (startup_db, register_user, verify_password, change_password,
                       load_all_usernames, contains_username, load_messages, save_message,
-                      create_token, verify_token_and_extract_username_and_new_token)
+                      create_token, create_refresh_token,
+                      verify_token_and_extract_username_and_new_token)
 
 app = Flask(__name__)
 
@@ -15,8 +16,9 @@ def authenticate(db_action):
     
     success = db_action(username, password)
     if success:
-        response_body = create_token(username, require_refresh=True)
-                            # i.e. response contains token, refresh_token
+        token = create_token(username)
+        refresh_token = create_refresh_token(username, password)
+        response_body = {'token' : token, 'refresh_token' : refresh_token}
         return make_response(jsonify(response_body), 200)
     else:
         return abort(401)
@@ -31,6 +33,29 @@ def register():
 def login():
     return authenticate(verify_password)
 
+
+@app.route('/password', methods=['POST'])
+def password():
+    credentials = verify_token_and_extract_username_and_new_token(request.headers)
+    if credentials is not None:
+        old_password = request.json.get('old_password')
+        new_password = request.json.get('new_password')
+        if not isinstance(old_password, str) or not isinstance(new_password, str):
+            return abort(400)
+        
+        if verify_password(credentials['username'], old_password):
+            change_password(credentials['username'], new_password)
+            new_refresh_token = create_refresh_token(
+                    credentials['username'], new_password, old_password)
+            response_body = {'refresh_token' : new_refresh_token}
+            if 'token' in credentials:
+                response_body['token'] = credentials['token']
+            return make_response(jsonify(response_body), 200)
+        else:
+            return make_response(jsonify({'error' : 'Old password invalid'}), 403)
+    else:
+        abort(401)
+        
 
 @app.route('/users', methods=['GET'])
 def read_all_usernames():

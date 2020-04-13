@@ -14,7 +14,9 @@ function getStoredCredentials() {
 function setStoredCredentials(username, token, refreshToken) {
   window.sessionStorage.setItem("loggedIn", "true");
   window.sessionStorage.setItem("username", username);
-  window.sessionStorage.setItem("token", token);
+  if (token != null) {
+    window.sessionStorage.setItem("token", token);
+  }
   if (refreshToken != null) {
     window.sessionStorage.setItem("refreshToken", refreshToken);
   }
@@ -233,6 +235,9 @@ function changeTargetUsername() {
 async function renderWhenLoggedIn() {
   document.getElementById("status").style.display = "none";
   document.getElementById("logout").style.display = "none";
+  document.getElementById("showChangePasswordDiv").style.display = "none";
+  document.getElementById("passwordChange").style.display = "none";
+  document.getElementById("passwordMessage").style.display = "none";
   document.getElementById("login").style.display = "none";
   document.getElementById("contents").style.display = "none";
   const username = getStoredCredentials().username;
@@ -241,6 +246,7 @@ async function renderWhenLoggedIn() {
   document.getElementById("status").innerText = "Logged in as " + username + ".";
   document.getElementById("status").style.display = "inline";
   document.getElementById("logout").style.display = "inline";
+  document.getElementById("showChangePasswordDiv").style.display = "block";
   document.getElementById("contents").style.display = "block";
 }
 
@@ -248,7 +254,7 @@ async function authenticate(url) {
   const username = document.getElementById("username").value;
   const password = document.getElementById("password").value;
   if (username.match(/^[0-9a-zA-Z]+$/) == null || password.match(/^[0-9a-zA-Z]+$/) == null) {
-    document.getElementById("status").innerText = "Username and password must be alphanumeric.";
+    document.getElementById("status").innerText = "Username and password must be non-empty and alphanumeric.";
     document.getElementById("status").style.display = "inline";
     return;
   } else {
@@ -303,6 +309,12 @@ function renderWhenLoggedOut() {
   document.getElementById("status").innerText = "";
   document.getElementById("status").style.display = "none";
   document.getElementById("logout").style.display = "none";
+  document.getElementById("showChangePasswordDiv").style.display = "none";
+  document.getElementById("passwordChange").style.display = "none";
+  document.getElementById("oldPassword").value = "";
+  document.getElementById("newPassword").value = "";
+  document.getElementById("passwordMessage").innerText = "";
+  document.getElementById("passwordMessage").style.display = "none";
   document.getElementById("username").value = "";
   document.getElementById("password").value = "";
   document.getElementById("login").style.display = "block";
@@ -320,6 +332,72 @@ function logout() {
   
   removeStoredCredentials();
   renderWhenLoggedOut();
+}
+
+function showChangePassword() {
+  document.getElementById("showChangePasswordDiv").style.display = "none";
+  document.getElementById("passwordChange").style.display = "block";
+}
+
+async function changePassword() {
+  const oldPassword = document.getElementById("oldPassword").value;
+  const newPassword = document.getElementById("newPassword").value;
+  if (oldPassword.match(/^[0-9a-zA-Z]+$/) == null || newPassword.match(/^[0-9a-zA-Z]+$/) == null) {
+    document.getElementById("passwordMessage").innerText = "Passwords must be non-empty and alphanumeric.";
+    document.getElementById("passwordMessage").style.display = "block";
+    return;
+  }
+  
+  const storedCredentials = getStoredCredentials();
+  const url = "password";
+  const requestJson = {
+    method: "Post",
+    headers: {
+      "Authorization": "Bearer " + storedCredentials.token + " " + storedCredentials.refreshToken,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      old_password: oldPassword,
+      new_password: newPassword
+    }),
+    mode: "cors",
+    cache: "no-cache"
+  };
+  
+  const response = await fetch(url, requestJson);
+  
+  if (response.status == 200) {
+    const responseJson = await response.json();
+    
+    if (!userIsStillLoggedIn(storedCredentials.username)) {
+      return;
+    }
+    
+    document.getElementById("oldPassword").value = "";
+    document.getElementById("newPassword").value = "";
+    document.getElementById("passwordMessage").innerText = "";
+    document.getElementById("passwordMessage").style.display = "none";
+    document.getElementById("passwordChange").style.display = "none";
+    document.getElementById("showChangePasswordDiv").style.display = "block";
+    
+    if ("token" in responseJson) {
+      setStoredCredentials(storedCredentials.username, responseJson.token, responseJson.refresh_token);
+    } else {
+      setStoredCredentials(storedCredentials.username, null, responseJson.refresh_token);
+    }
+
+  }
+  else if (response.status == 403) {
+    if (userIsStillLoggedIn(storedCredentials.username)) {
+      document.getElementById("passwordMessage").innerText = "Old password is incorrect.";
+      document.getElementById("passwordMessage").style.display = "block";
+    }
+  }
+  else if (response.status == 401) {
+    if (userIsStillLoggedIn(storedCredentials.username)) {
+      logout();
+    }
+  }
 }
 
 async function refresh(expectedLoggedInUser) {
