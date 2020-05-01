@@ -1,0 +1,65 @@
+body, input, button, label, select, option, textarea {
+  font-family: Verdana;
+  font-size: 12px;
+}
+
+p {
+  margin: 6px 2px;
+}
+
+.heavy {
+  font-weight: bold;
+}
+
+div {
+  margin: 4px 0;
+}
+
+ul {
+  padding-left: 20px;
+}
+
+li {
+  padding-bottom: 5px;
+}
+
+textarea {
+  width: 230px;
+}
+
+input {
+  width: 120px;
+}
+
+select {
+  margin: 0 6px;
+  width: 125px;
+}
+
+button {
+  width: 70px;
+  margin: 6px 2px;
+}
+
+button.wide {
+  width: 125px;
+  margin-top: 0;
+  padding-top: 0;
+  margin-bottom: 18px;
+}
+
+button.skinny {
+  padding: 0;
+}
+
+td.key {
+  width: 108px;
+}
+
+td.input {
+  width: 120px;
+}
+
+td.long {
+  width: 160px;
+}

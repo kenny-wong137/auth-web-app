@@ -145,11 +145,6 @@ def server_error(error):
     return make_response(jsonify({'error': 'Internal server error'}), 500)
 
 
-@app.route('/', methods=['GET'])
-def frontend():
-    return app.send_static_file('index.html')
-
-
 if __name__ == '__main__':
     startup_db()
     WSGIServer(('', 5000), app).serve_forever()
