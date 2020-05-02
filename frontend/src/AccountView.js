@@ -80,7 +80,7 @@ class AccountView extends React.Component {
       <div>
         {this.renderStatusElement()}
         {this.renderChangePasswordElement()}
-         <br />
+        <br />
         {this.renderMessageDisplayElement()}
       </div>
     );

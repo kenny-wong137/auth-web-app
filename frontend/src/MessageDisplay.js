@@ -6,17 +6,17 @@ class MessageDisplay extends React.Component {
   constructor(props) {
     super(props);
     
+    this.accountHolderUsername = props.credentials.username;
+    
     this.state = {
       usernameList: null,
-      targetUsername: props.credentials.username,
-      renderedUsername: null,  // lags behind targetUsername due to async callout latency
+      targetUsername: this.accountHolderUsername, // the person who we wish to render messages for
+      renderedUsername: null,  // lags behind targetUsername due to async api callout latency
       usernamesToMessageLists: {},
       newMessage: ""
     };
     
     this.refreshTimer = null;
-    
-    this.originalUsername = props.credentials.username;  // i.e. who is logged in
   }
   
   componentDidMount() {
@@ -80,7 +80,7 @@ class MessageDisplay extends React.Component {
   async handleSubmitNewMessage() {
     try {
       const result = await sendNewMessage(
-        this.originalUsername, this.state.newMessage, this.props.credentials
+        this.accountHolderUsername, this.state.newMessage, this.props.credentials
       );
 
       this.setState({
@@ -100,7 +100,7 @@ class MessageDisplay extends React.Component {
   renderTargetUsernameSelector() {
     const selectOptions = this.state.usernameList.map(username => {
       let usernameText = username;
-      if (username == this.props.credentials.username) {
+      if (username == this.accountHolderUsername) {
         usernameText += " (You)";
       }
       return <option key={username} value={username}>{usernameText}</option>;
@@ -135,7 +135,7 @@ class MessageDisplay extends React.Component {
   }
   
   renderNewMessageBox() {
-    if (this.state.renderedUsername == this.props.credentials.username) {
+    if (this.state.renderedUsername == this.accountHolderUsername) {
       return (
         <div>
           <p>New post</p>

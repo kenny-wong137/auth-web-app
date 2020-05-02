@@ -40,7 +40,6 @@ class Login extends React.Component {
     return (
       <div>
         <p className="heavy">Log in</p>
-        <p>{this.state.error}</p>
         <table>
           <tbody>
             <tr>
@@ -65,6 +64,7 @@ class Login extends React.Component {
         </table>
         <button onClick={() => this.handleSubmit("login")}>Login</button>
         <button onClick={() => this.handleSubmit("register")}>Register</button>
+        <p>{this.state.error}</p>
       </div>
     );
   }
