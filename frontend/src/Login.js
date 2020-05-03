@@ -46,6 +46,7 @@ class Login extends React.Component {
               <td className="key">Username</td>
               <td className="input">
                 <input
+                  type="text"
                   value={this.state.username}
                   onChange={event => this.handleChangeUsername(event)}
                 />
@@ -55,6 +56,7 @@ class Login extends React.Component {
               <td className="key">Password</td>
               <td className="input">
                 <input
+                  type="password"
                   value={this.state.password}
                   onChange={event => this.handleChangePassword(event)}
                 />

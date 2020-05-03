@@ -53,6 +53,7 @@ class PasswordChange extends React.Component {
               <td className="key">Old password:</td>
               <td className="input">
                 <input
+                  type="password"
                   value={this.state.oldPassword}
                   onChange={event => this.handleChangeOldPassword(event)}
                 />
@@ -62,6 +63,7 @@ class PasswordChange extends React.Component {
               <td className="key">New password:</td>
               <td className="input">
                 <input
+                  type="password"
                   value={this.state.newPassword}
                   onChange={event => this.handleChangeNewPassword(event)}
                 />
