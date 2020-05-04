@@ -26,8 +26,10 @@ services:
     image: nginx
     ports:
       - "80:80"
+      - "443:443"
     volumes:
       - $HOME/nginx-conf:/etc/nginx/conf.d
+      - $HOME/certs:/etc/ssl/certs/
     networks:
       - appnetwork
     depends_on:
