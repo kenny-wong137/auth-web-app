@@ -5,11 +5,19 @@ import datetime
 import time
 import os
 
-POOL = ThreadedConnectionPool(minconn=1, maxconn=32,
-                              host='backend-db', port='5432', database='postgres',
-                              user='postgres', password=os.environ['POSTGRES_PASSWORD'])
+POOL = None
 
-SECRET = os.environ['SECRET']
+while POOL is None:
+    try:
+        POOL = ThreadedConnectionPool(minconn=1, maxconn=32,
+                                      host='backend-db', port='5432', database='postgres',
+                                      user='postgres', password=os.environ['POSTGRES_PASSWORD'])
+    except:
+        time.sleep(1)
+        pass
+
+
+SECRET = os.environ['JWT_SECRET']
 
 
 def connection_from_pool(operation):
@@ -43,7 +51,7 @@ def connection_from_pool(operation):
 
 
 @connection_from_pool
-def startup_db(connection, drop_on_startup=True):
+def startup_db(connection, drop_on_startup=False):
     if drop_on_startup:
         with connection.cursor() as cursor:
             cursor.execute('DROP TABLE IF EXISTS messages')

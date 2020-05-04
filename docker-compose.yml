@@ -1,0 +1,38 @@
+version: "3"
+services: 
+  backend-db:
+    image: postgres
+    environment:
+      POSTGRES_PASSWORD: pgpassword
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - $HOME/dbfiles:/var/lib/postgresql/data
+    networks:
+      - appnetwork
+  backend-api:
+    build: backend/
+    environment:
+      POSTGRES_PASSWORD: pgpassword
+      JWT_SECRET: jwtsecret
+    networks:
+      - appnetwork
+    depends_on:
+      - "backend-db"
+  frontend-ui:
+    build: frontend/
+    networks:
+      - appnetwork
+  reverse-proxy:
+    image: nginx
+    ports:
+      - "80:80"
+    volumes:
+      - $HOME/nginx-conf:/etc/nginx/conf.d
+    networks:
+      - appnetwork
+    depends_on:
+      - "backend-api"
+      - "frontend-ui"
+networks:
+  appnetwork:
+    driver: bridge
