@@ -3,12 +3,13 @@ from passlib.hash import pbkdf2_sha256
 from jwt import encode, decode, ExpiredSignatureError
 import datetime
 import time
+import os
 
-POOL = ThreadedConnectionPool(minconn=1, maxconn=4,
-                              host='localhost' , port='5432', database='postgres',
-                              user='postgres', password='password')
+POOL = ThreadedConnectionPool(minconn=1, maxconn=32,
+                              host='backend-db', port='5432', database='postgres',
+                              user='postgres', password=os.environ['POSTGRES_PASSWORD'])
 
-SECRET = 'MonkeyBusiness123'  # For JWT. Change to environment variable in serious deployment.
+SECRET = os.environ['SECRET']
 
 
 def connection_from_pool(operation):
