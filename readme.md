@@ -1,11 +1,22 @@
 A minimal web app with user login and sign up implemented using JSON web tokens.
-The app allows users to post their own messages and to read messages posted by other users.
+Once logged in, a user can post messages and read messages posted by other users.
 
-Local deployment (Amazon Linux / Centos):
-Run as root `bash local-install.sh`, then open `http://localhost/` in Chrome.
+This project has taught me lots about React.js, Flask, PostgreSQL, Nginx and Docker,
+as well as about how online authentication works.
 
-If deploying something like this for real,
-remember to swap POSTGRES_PASSWORD and JWT_SECRET for real secrets.
-Also make sure to use https. If you save your certificate and key at the
-top level of this repo folder as `ssl-certificate.crt` and `ssl-certificate.key`,
-then the install script will set up the https connection for you.
+**Deployment instructions (Amazon Linux / Centos)**
+
+Run the installation script with root permissions, setting environment variable
+values for the Postgres and JWT secrets and the paths to the SSL certificate and private key.
+```
+sudo POSTGRES_PASSWORD=monkeybusiness \
+     JWT_SECRET=thegodfather2 \
+     CRT_PATH=/home/myaccount/my-ssl-cert.crt \
+     KEY_PATH=/home/myaccount/my-ssl-cert/key \
+     bash install.sh
+```
+
+Your app should now be running on port 443 with HTTPS.
+
+If you don't have an SSL certificate, you can run this app on port 80 with unsecure HTTP 
+by omitting the `CRT_PATH` and `KEY_PATH` variables.
