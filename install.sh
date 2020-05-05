@@ -30,8 +30,12 @@ else
 fi
 
 # Put environment variables in environment file
+# (Been having problems setting variables in the docker-compose file directly...)
 echo "POSTGRES_PASSWORD=${POSTGRES_PASSWORD}" > backend.env
 echo "JWT_SECRET=${JWT_SECRET}" >> backend.env
 
 # Start docker containers
 docker-compose up -d
+
+# Remove environment file
+rm backend.env

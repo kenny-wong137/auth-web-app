@@ -148,5 +148,3 @@ def server_error(error):
 if __name__ == '__main__':
     startup_db()
     WSGIServer(('', 5000), app).serve_forever()
-    # NB in a serious deployment we would use HTTPS,
-    # e.g. setting the constructor arguments keyfile=key.pem and certfile=cert.pem
