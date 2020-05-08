@@ -171,15 +171,11 @@ def get_username_and_token_using_refresh_token(connection, refresh_token):
         return {'username' : username, 'token' : new_token}
     
     
-def verify_token_and_extract_username_and_new_token(request_header):
-    auth_field = request_header.get('Authorization')
-    if auth_field is None or auth_field[:7] != 'Bearer ':
+def verify_token_and_extract_username_and_new_token(credentials):
+    if credentials is None:
         return None
-    words = auth_field[7:].split(' ')
-    if len(words) != 2 or len(words[0]) == 0 or len(words[1]) == 0:
-        return None
-    token = words[0]
-    refresh_token = words[1]
+    token = credentials['token']
+    refresh_token = credentials['refresh_token']
     
     try:
         payload = decode(token.encode('utf-8'), SECRET, algorithms=['HS256'])

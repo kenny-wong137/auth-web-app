@@ -8,7 +8,7 @@ from dbaccess import (startup_db, register_user, verify_password, change_passwor
 app = Flask(__name__)
 
 
-def authenticate(db_action):
+def _authenticate(db_action):
     username = request.json.get('username')
     password = request.json.get('password')
     if not isinstance(username, str) or not isinstance(password, str):
@@ -26,17 +26,31 @@ def authenticate(db_action):
 
 @app.route('/register', methods=['POST'])
 def register():
-    return authenticate(register_user)
+    return _authenticate(register_user)
 
 
 @app.route('/login', methods=['POST'])
 def login():
-    return authenticate(verify_password)
+    return _authenticate(verify_password)
+
+
+def _parse_header(request):
+    auth_field = request.headers.get('Authorization')
+    if auth_field is None or auth_field[:7] != 'Bearer ':
+        return None
+    
+    words = auth_field[7:].split(' ')
+    if len(words) != 2 or len(words[0]) == 0 or len(words[1]) == 0:
+        return None
+    
+    token = words[0]
+    refresh_token = words[1]
+    return {'token': token, 'refresh_token': refresh_token}
 
 
 @app.route('/password', methods=['POST'])
 def password():
-    credentials = verify_token_and_extract_username_and_new_token(request.headers)
+    credentials = verify_token_and_extract_username_and_new_token(_parse_header(request))
     if credentials is not None:
         old_password = request.json.get('old_password')
         new_password = request.json.get('new_password')
@@ -59,7 +73,7 @@ def password():
 
 @app.route('/users', methods=['GET'])
 def read_all_usernames():
-    credentials = verify_token_and_extract_username_and_new_token(request.headers)
+    credentials = verify_token_and_extract_username_and_new_token(_parse_header(request))
     if credentials is not None:
         usernames = load_all_usernames()
         response_body = {'usernames' : usernames}
@@ -72,7 +86,7 @@ def read_all_usernames():
     
 @app.route('/messages/<string:target_username>', methods=['GET'])
 def read_messages(target_username):
-    credentials = verify_token_and_extract_username_and_new_token(request.headers)
+    credentials = verify_token_and_extract_username_and_new_token(_parse_header(request))
     if credentials is not None:
         if contains_username(target_username):
             messages = load_messages(target_username)
@@ -91,7 +105,7 @@ def write_message(target_username):
     message = request.json.get('message')
     if not isinstance(message, str):
         return abort(400)
-    credentials = verify_token_and_extract_username_and_new_token(request.headers)
+    credentials = verify_token_and_extract_username_and_new_token(_parse_header(request))
     if credentials is not None and credentials['username'] == target_username:
         save_message(target_username, message)
         response_body = {}
