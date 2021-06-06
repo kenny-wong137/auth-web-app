@@ -135,7 +135,7 @@ def save_message(connection, username, message):
 def create_token(username):
     payload = {'username' : username,
                'exp': datetime.datetime.utcnow() + datetime.timedelta(seconds=60)}
-    token = encode(payload, SECRET, algorithm='HS256').decode('utf-8')
+    token = encode(payload, SECRET, algorithm='HS256')
     return token
 
 
@@ -143,7 +143,7 @@ def create_token(username):
 def create_refresh_token(connection, username, password, old_password=None):
     with connection.cursor() as cursor:
         refresh_payload = {'username' : username, 'password' : password}
-        refresh_token = encode(refresh_payload, SECRET, algorithm='HS256').decode('utf-8')
+        refresh_token = encode(refresh_payload, SECRET, algorithm='HS256')
         cursor.execute('INSERT INTO refresh VALUES (%s, %s) ' +
                        'ON CONFLICT (refresh_token) DO UPDATE SET username = EXCLUDED.username',
                        (refresh_token, username))
@@ -151,7 +151,7 @@ def create_refresh_token(connection, username, password, old_password=None):
     if old_password is not None:
         with connection.cursor() as cursor:
             old_refresh_payload = {'username' : username, 'password' : old_password}
-            old_refresh_token = encode(old_refresh_payload, SECRET, algorithm='HS256').decode('utf-8')
+            old_refresh_token = encode(old_refresh_payload, SECRET, algorithm='HS256')
             cursor.execute('DELETE FROM refresh WHERE refresh_token = %s', (old_refresh_token,))
 
     return refresh_token
@@ -178,7 +178,7 @@ def verify_token_and_extract_username_and_new_token(credentials):
     refresh_token = credentials['refresh_token']
     
     try:
-        payload = decode(token.encode('utf-8'), SECRET, algorithms=['HS256'])
+        payload = decode(token, SECRET, algorithms=['HS256'])
         username = payload.get('username')
         return {'username' : username}
     except ExpiredSignatureError: # token expired        
